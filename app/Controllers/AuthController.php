@@ -1,5 +1,5 @@
 <?php
-namespace App\Controllers; // ✅ Use correct namespace (matching your folder)
+namespace App\Controllers; 
 
 require_once __DIR__ . '/../../vendor/autoload.php'; // ✅ Include autoloader
 
@@ -12,7 +12,7 @@ class AuthController {
 
     public function __construct() {
         $this->db = new Database();
-        $conn = $this->db->connect(); // ✅ Correct way to use Database
+        $conn = $this->db->connect();
         $this->user = new User($conn);
 
     }
@@ -47,6 +47,8 @@ class AuthController {
     
         session_start();
         $_SESSION['user_id'] = $user['id'];
+        $_SESSION['first_name'] = $user['first_name']; 
+        $_SESSION['last_name'] = $user['last_name']; 
         $_SESSION['role'] = $user['role'];
     
         if ($user['role'] == "job_seeker") {

@@ -1,16 +1,24 @@
 <?php
 use App\Controllers\AuthController;
+use App\Models\User;;
+
 // use Gradelink\System\Controllers\EmailController;
 
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../Models/User.php';
+
+
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $auth = new AuthController();
+    $userModel = new User();
     $email = $_POST['email'];
     $password = $_POST['password'];
 
     $result = $auth->login($email, $password);
+    // ✅ Reset daily credits upon login
+    $userModel->resetDailyCredits($user['id']);
     
     if (!$result['success']) {
         echo $result['message'];

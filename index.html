@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Barcode</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        input { padding: 10px; margin: 10px; width: 200px; }
+        button { padding: 10px; cursor: pointer; }
+        #barcode-container { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h2>Barcode Generator</h2>
+    <input type="text" id="barcode-input" placeholder="Enter Data">
+    <button onclick="generateBarcode()">Generate</button>
+
+    <div id="barcode-container">
+        <svg id="barcode"></svg>
+    </div>
+
+    <script>
+        function generateBarcode() {
+            let inputData = document.getElementById("barcode-input").value;
+            if (inputData.trim() === "") {
+                alert("Please enter valid data!");
+                return;
+            }
+
+            JsBarcode("#barcode", inputData, {
+                format: "CODE128",  // Barcode format (CODE128 is commonly used)
+                displayValue: true, // Show text below the barcode
+                lineColor: "#000",  // Black barcode
+                width: 2,           // Width of bars
+                height: 50          // Height of barcode
+            });
+        }
+    </script>
+
+</body>
+</html>
