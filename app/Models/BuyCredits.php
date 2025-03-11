@@ -1,10 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../../vendor/autoload.php';
-
 use GuzzleHttp\Client;
 use App\Config\Database;
-use Dotenv\Dotenv;
 
 header('Content-Type: application/json');
 
@@ -28,24 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['credits'])) {
     $database = new Database();
     $conn = $database->connect();
 
-    // Initialize Dotenv and load environment variables from the project root
-    $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
-    $dotenv->load();
-    
-    // Debug: Check if the API key is loaded
-    $paymongo_secret_key = getenv('PAYMONGO_SECRET_KEY');
-    if (!$paymongo_secret_key) {
-        echo json_encode([
-            "status" => "error", 
-            "message" => "PayMongo API key not found.",
-            "debug" => [
-                "env_file_path" => __DIR__ . '/../../',
-                "PAYMONGO_SECRET_KEY" => getenv('PAYMONGO_SECRET_KEY')
-            ]
-        ]);
-        exit;
-    }
-    
+    // PayMongo API Key
+    $paymongo_secret_key = 'sk_test_urk7YTwBYn1M6HJAMx9sTLCX'; // Replace with your actual key
     $amount = $credits * 10 * 100; // Convert to centavos (PHP)
 
     $client = new Client();
@@ -63,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['credits'])) {
                     "attributes" => [
                         "amount" => $amount,
                         "currency" => "PHP",
-                        "description" => "$credits Credits Purchase",
+                        "description" => "$credits Proposal Credits Purchase",
                         "payment_method_types" => ["card", "gcash", "grab_pay"],
                         "success_url" => "https://yourwebsite.com/success",
                         "failed_url" => "https://yourwebsite.com/failed"
@@ -77,6 +59,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['credits'])) {
 
         if (isset($responseData['data']['attributes']['checkout_url'])) {
             $checkoutUrl = $responseData['data']['attributes']['checkout_url'];
+
+            // ✅ I-update agad ang proposal_credits ng user
+            $stmt = $conn->prepare("UPDATE proposal_credits SET credits = credits + ? WHERE user_id = ?");
+            $stmt->execute([$credits, $userId]);
+
             echo json_encode(["status" => "success", "payment_url" => $checkoutUrl]);
             exit;
         } else {
@@ -99,4 +86,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['credits'])) {
 } else {
     echo json_encode(["status" => "error", "message" => "Invalid request method or missing credits."]);
 }
-?>

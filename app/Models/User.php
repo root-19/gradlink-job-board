@@ -6,8 +6,8 @@ use App\Config\Database;
 use PDO;
 
 
-// $userModel = new User();
-// $userId = $_SESSION['user_id'];
+//  $userModel = new User();
+//  $userId = $_SESSION['user_id'];
 
 class User {
     private $conn;
@@ -76,14 +76,18 @@ class User {
 
     // ✅ Reset Daily Credits (Run this when a user logs in)
     public function resetDailyCredits($userId) {
+        if (empty($userId)) {
+            return false; // Prevent error when user ID is null
+        }
+    
         $query = "SELECT credits, last_reset FROM proposal_credits WHERE user_id = :user_id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(":user_id", $userId);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
+    
         $today = date("Y-m-d");
-
+    
         if (!$result) {
             // If no record exists, create one with 10 credits
             $insertQuery = "INSERT INTO proposal_credits (user_id, credits, last_reset) VALUES (:user_id, 10, :last_reset)";
@@ -99,10 +103,9 @@ class User {
             $updateStmt->bindParam(":last_reset", $today);
             return $updateStmt->execute();
         }
-
+    
         return true; // Credits are already up to date
     }
-
     // ✅ Use Credit (Deduct 5 Credit)
     public function useCredit($userId) {
         $this->resetDailyCredits($userId); // Ensure credits are refreshed daily

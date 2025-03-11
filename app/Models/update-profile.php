@@ -14,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Handle Image Upload
     if (!empty($_FILES['profile_image']['name'])) {
         $image_name = time() . "_" . basename($_FILES["profile_image"]["name"]); // Generate unique filename
-        $target_dir = __DIR__ . "/../../uploads/"; // Absolute path to uploads folder
+        $target_dir = __DIR__ . "/../uploads/"; // Absolute path to uploads folder
         $target_file = $target_dir . $image_name; // Full file path
 
         // Move uploaded file to uploads directory
@@ -23,7 +23,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Optional: Delete old image if not the default one
             if (!empty($_POST['existing_profile_image']) && $_POST['existing_profile_image'] !== 'default-avatar.png') {
-                $old_image_path = __DIR__ . "/../../uploads/" . $_POST['existing_profile_image'];
+                $old_image_path = __DIR__ . "uploads/" . $_POST['existing_profile_image'];
                 if (file_exists($old_image_path)) {
                     unlink($old_image_path);
                 }

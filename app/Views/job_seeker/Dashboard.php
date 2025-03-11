@@ -84,8 +84,9 @@ try {
             <input type="text" placeholder="Find Keyword for Work" class="p-2 rounded w-full md:w-auto">
         </div>
         <div class="space-x-2 flex flex-wrap justify-center mt-2 md:mt-0">
-            <button>🔔</button>
-            <button>📧</button>
+        <a href="notification.php" class="bg-blue-500 text-white px-4 py-2 rounded">Notification</a>
+        <a href="jobseeker_chat.php" class="bg-blue-500 text-white px-4 py-2 rounded">Chat</a>
+            
             <a href="logout.php" class="bg-red-500 p-2 rounded">Logout</a>
         </div>
     </nav>
@@ -290,6 +291,7 @@ function applyForJob(jobId) {
         });
     });
 });
+
 </script>
 <script>
     function reactToJob(jobId, reaction) {

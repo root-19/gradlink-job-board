@@ -35,6 +35,16 @@ $first_name = $_SESSION['first_name'] ?? 'Guest';
 $last_name = $_SESSION['last_name'] ?? 'User';
 
 
+// Fetch user proposal credits
+try {
+    $stmt = $conn->prepare("SELECT credits FROM proposal_credits WHERE user_id = :user_id");
+    $stmt->bindParam(":user_id", $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $proposal_credits = $user['credits'] ?? 10; 
+} catch (PDOException $e) {
+    die("Error fetching proposal credits: " . $e->getMessage());
+}
 
 // Fetch user details
 $user_id = $_SESSION['user_id'] ?? 0; // Ensure $user_id is set
@@ -71,7 +81,7 @@ $full_name = isset($user['first_name'], $user['last_name']) ? $user['first_name'
         </div>
         <div class="space-x-2 flex flex-wrap justify-center mt-2 md:mt-0">
             <button>🔔</button>
-            <button>📧</button>
+            <a href="chat.php" class="bg-blue-500 text-white px-4 py-2 rounded">Chat</a>
             <a href="logout.php" class="bg-red-500 p-2 rounded">Logout</a>
         </div>
     </nav>
@@ -138,7 +148,7 @@ $full_name = isset($user['first_name'], $user['last_name']) ? $user['first_name'
     </div>
 </div>
 <script> 
-    function viewProposal(jobId) {
+   function viewProposal(jobId) {
     fetch(`../../Models/fetch_applicants.php?job_id=${jobId}`)
         .then(response => response.json())
         .then(data => {
@@ -151,7 +161,11 @@ $full_name = isset($user['first_name'], $user['last_name']) ? $user['first_name'
                 data.forEach(applicant => {
                     content.innerHTML += `
                         <div class="p-2 border-b">
-                            <p><strong>${applicant.first_name}</strong> (User ID: ${applicant.user_id})</p>
+                            <p><strong>${applicant.first_name}</strong></p>
+                            <button class="mt-2 bg-green-500 text-white px-4 py-2 rounded"
+                                onclick="hireApplicant(${applicant.user_id}, ${jobId})">
+                                Hire
+                            </button>
                         </div>
                     `;
                 });
@@ -164,6 +178,25 @@ $full_name = isset($user['first_name'], $user['last_name']) ? $user['first_name'
 
 function closeModal() {
     document.getElementById("proposalModal").classList.add("hidden");
+}
+
+// Function to hire an applicant
+function hireApplicant(userId, jobId) {
+    fetch(`../../Models/hire_applicant.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, job_id: jobId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Applicant hired successfully!");
+            closeModal();
+        } else {
+            alert("Error hiring applicant.");
+        }
+    })
+    .catch(error => console.error("Error:", error));
 }
 
 </script>
@@ -193,9 +226,61 @@ function closeModal() {
         <button onclick="openModal()" class="bg-blue-500 text-white w-full p-2 rounded mt-2">Edit Profile</button>
 
         <!-- Premium Section -->
-        <button class="bg-yellow-500 w-full p-2 rounded mt-2">GO PREMIUM</button>
-        <p class="text-sm mt-2">Plan: FREE</p>
-        <button class="bg-gray-300 w-full p-2 rounded mt-2">Watch Ad Video to get more</button>
+        <div class="mt-2 p-2 bg-gray-100 rounded">
+    <p class="text-sm font-semibold">Proposal Credits:</p>
+    <p class="text-lg font-bold text-green-600"><?= htmlspecialchars($proposal_credits); ?></p>
+            </div>
+      
+            <!-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> -->
+            <button class="go-premium-btn bg-yellow-500 w-full p-2 rounded mt-2">GO PREMIUM</button>
+            <script>
+ document.addEventListener("DOMContentLoaded", function () {
+    document.querySelector(".go-premium-btn").addEventListener("click", function () {
+        Swal.fire({
+            title: "Choose Credits to Buy",
+            input: "select",
+            inputOptions: {
+                50: "50 Credits",
+                100: "100 Credits",
+                150: "150 Credits",
+                200: "200 Credits",
+                250: "250 Credits",
+                300: "300 Credits",
+                500: "500 Credits"
+            },
+            inputPlaceholder: "Select an option",
+            showCancelButton: true,
+            confirmButtonText: "Buy Now",
+            cancelButtonText: "Cancel",
+            icon: "info"
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                let selectedCredits = result.value;
+
+                // Send request to process purchase
+                fetch("../../Models/BuyCredits.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: "credits=" + selectedCredits
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success" && data.payment_url) {
+                        window.location.href = data.payment_url; // Redirect to PayMongo
+                    } else {
+                        Swal.fire({
+                            title: "Error!",
+                            text: data.message,
+                            icon: "error",
+                        });
+                    }
+                });
+            }
+        });
+    });
+});
+
+</script>
     </div>
 </div>
 

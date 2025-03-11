@@ -1,17 +1,11 @@
 <?php
 session_start();
-
 require_once __DIR__ . '/../../config/Database.php';
-
 use App\Config\Database;
 use App\Models\User;
-
 require_once __DIR__ . '/../../Models/User.php';
 
-$userModel = new User();
-$userId = $_SESSION['user_id'];
-
-
+// Ensure user is logged in
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'job_seeker') {
     header("Location: login.php");
     exit();
@@ -19,6 +13,32 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'job_seeker') {
 
 $database = new Database();
 $conn = $database->connect();
+$userId = $_SESSION['user_id'];
+
+// Fetch user details from users table
+try {
+    $stmt = $conn->prepare("SELECT profile_image, bio, first_name, last_name FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $first_name = $user['first_name'] ?? 'Guest';
+    $last_name = $user['last_name'] ?? 'User';
+    $profile_image = !empty($user['profile_image']) ? $user['profile_image'] : 'default-avatar.png';
+    $bio = !empty($user['bio']) ? $user['bio'] : 'No bio available.';
+} catch (PDOException $e) {
+    die("Error fetching user details: " . $e->getMessage());
+}
+
+// Fetch user proposal credits
+try {
+    $stmt = $conn->prepare("SELECT credits FROM proposal_credits WHERE user_id = :user_id");
+    $stmt->bindParam(":user_id", $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    $creditsData = $stmt->fetch(PDO::FETCH_ASSOC);
+    $proposal_credits = $creditsData['credits'] ?? 10;  // Default to 10 if no record found
+} catch (PDOException $e) {
+    die("Error fetching proposal credits: " . $e->getMessage());
+}
 
 // Fetch job posts
 try {
@@ -28,41 +48,6 @@ try {
 } catch (PDOException $e) {
     die("Error fetching jobs: " . $e->getMessage());
 }
-
-try {
-    $stmt = $conn->prepare("SELECT p.id, p.first_name, p.job_title, p.job_description, p.budget, p.post_date, 
-                            COALESCE(SUM(CASE WHEN r.reaction_type = 'heart' THEN 1 ELSE 0 END), 0) AS heart_count,
-                            COALESCE(SUM(CASE WHEN r.reaction_type = 'boo' THEN 1 ELSE 0 END), 0) AS boo_count
-                            FROM post_job p
-                            LEFT JOIN job_reactions r ON p.id = r.job_id
-                            GROUP BY p.id
-                            ORDER BY p.post_date DESC");
-    $stmt->execute();
-    $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    die("Error fetching jobs: " . $e->getMessage());
-}
-
-// Fetch user proposal credits
-try {
-    $stmt = $conn->prepare("SELECT credits FROM proposal_credits WHERE user_id = :user_id");
-    $stmt->bindParam(":user_id", $userId, PDO::PARAM_INT);
-    $stmt->execute();
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    // Assign the fetched value or set default (e.g., 10 credits)
-    $proposal_credits = $user['credits'] ?? 10; 
-} catch (PDOException $e) {
-    die("Error fetching proposal credits: " . $e->getMessage());
-}
-
-
-// Fetch user details from session
-$first_name = $_SESSION['first_name'] ?? 'Guest';
-$last_name = $_SESSION['last_name'] ?? 'User';
-
-
-
 
 // Fetch Talents for Display
 try {
@@ -84,7 +69,9 @@ try {
 </head>
 <body class="bg-gray-100">
     <nav class="bg-purple-900 p-4 flex flex-wrap justify-between items-center text-white">
-        <div class="text-xl font-bold">GRADLINK</div>
+    <a href="dashboard.php">
+    <div class="text-xl font-bold cursor-pointer hover:text-blue-500">GRADLINK</div>
+</a>
         <div class="space-x-2 flex flex-wrap justify-center">
             <select class="bg-white text-black p-2 rounded">
                 <option>Find Work</option>
@@ -140,7 +127,7 @@ try {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <?php foreach ($talents as $talent): ?>
                 <div class="border rounded p-4 shadow">
-                <img src="/capstone17/uploads/<?php echo htmlspecialchars(basename($talent['image'])); ?>" 
+                <img src="../../uploads/<?php echo htmlspecialchars(basename($talent['image'])); ?>" 
      alt="Talent Image" 
      class="w-32 h-32 object-cover rounded">
 
@@ -160,19 +147,61 @@ try {
 </div>
         </div>
         <div class="md:w-1/4 bg-white p-4 rounded shadow-md mt-4 md:mt-0">
-       <div class="text-center">
-        <div class="bg-gray-300 w-24 h-24 mx-auto rounded-full"></div>
+    <div class="text-center">
+        <img src="/uploads/<?= htmlspecialchars($profile_image); ?>" class="w-24 h-24 mx-auto rounded-full object-cover">
         <h3 class="font-bold mt-2"><?= htmlspecialchars($first_name) . ' ' . htmlspecialchars($last_name); ?></h3>
-        <p class="text-sm">Educational Attainment</p>
+        <p class="text-sm mt-1"><?= htmlspecialchars($bio); ?></p>
+        <button onclick="openModals()" class="bg-purple-900 text-white w-full p-2 rounded mt-2">Edit Profile</button>
         
-        <!-- Proposal Credits Section -->
         <div class="mt-2 p-2 bg-gray-100 rounded">
-    <p class="text-sm font-semibold">Proposal Credits:</p>
-    <p class="text-lg font-bold text-green-600"><?= htmlspecialchars($proposal_credits); ?></p>
-            </div>
+            <p class="text-sm font-semibold">Proposal Credits:</p>
+            <p class="text-lg font-bold text-green-600"><?= htmlspecialchars($proposal_credits); ?></p>
+        </div>
+    </div>
+</div>
+
+   <!-- Modal for Editing Profile -->
+   <div id="editProfileModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden">
+    <div class="bg-white p-6 rounded shadow-lg w-1/3">
+        <!-- <h2 class="text-lg font-bold mb-4">Edit Profile</h2> -->
+        <form action="../../Models/job_seeker_profile.php" method="POST" enctype="multipart/form-data">
+        <h2 class="text-lg font-bold mb-4">Edit Profile</h2>
+            <!-- Profile Image Upload -->
+            <label class="block text-sm font-medium">Profile Image:</label>
+            <input type="file" name="profile_image" class="border p-2 w-full rounded mb-3">
+
+            <!-- Hidden Input for Existing Image -->
+            <input type="hidden" name="existing_profile_image" value="<?= htmlspecialchars($profile_image); ?>">
+
+            <!-- Bio Edit -->
+            <label class="block text-sm font-medium">Bio:</label>
+            <textarea name="bio" class="border p-2 w-full rounded mb-3"><?= htmlspecialchars($bio); ?></textarea>
+
+            <!-- Save Changes Button -->
+            <button type="submit" class="bg-blue-500 text-white p-2 w-full rounded">Save Changes</button>
+        </form>
+
+        <!-- Close Modal -->
+        <button onclick="closeModals()" class="bg-red-500 text-white p-2 w-full rounded mt-2">Cancel</button>
+    </div>
+</div>
+
+<script>
+    function openModals() {
+        document.getElementById('editProfileModal').classList.remove('hidden');
+    }
+
+    function closeModals() {
+        document.getElementById('editProfileModal').classList.add('hidden');
+    }
+</script>    </div>
+</div>
+
+        
+      
 
             <!-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> -->
-            <button class="go-premium-btn bg-yellow-500 w-full p-2 rounded mt-2">GO PREMIUM</button>
+            <!-- <button class="go-premium-btn bg-yellow-500 w-full p-2 rounded mt-2">GO PREMIUM</button> -->
 
 
     </div>

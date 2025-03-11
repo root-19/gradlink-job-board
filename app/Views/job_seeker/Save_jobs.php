@@ -199,7 +199,7 @@ $full_name = isset($user['first_name'], $user['last_name']) ? $user['first_name'
                     <p class="text-sm font-semibold">Proposal Credits:</p>
                     <p class="text-lg font-bold text-green-600"><?= htmlspecialchars($proposal_credits); ?></p>
                 </div>
-                <button class="go-premium-btn bg-yellow-500 w-full p-2 rounded mt-2">GO PREMIUM</button>
+                <!-- <button class="go-premium-btn bg-yellow-500 w-full p-2 rounded mt-2">GO PREMIUM</button> -->
             </div>
         </div>
     </div>
