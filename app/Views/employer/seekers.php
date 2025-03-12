@@ -66,7 +66,7 @@ $talents = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="space-x-2 flex flex-wrap justify-center mt-2 md:mt-0">
             <button>🔔</button>
-            <button>📧</button>
+            <a href="chat.php" class="bg-blue-500 text-white px-4 py-2 rounded">Chat</a>
             <a href="logout.php" class="bg-red-500 p-2 rounded">Logout</a>
         </div>
     </nav>
@@ -99,29 +99,49 @@ $talents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             <div class="bg-white p-4 rounded shadow-md mb-4">
            <!-- DITO MO IDISPLAY -->
-           <?php if (count($talents) > 0): ?>
-                <?php foreach ($talents as $talent): ?>
-                    <div class="border-b border-gray-300 py-4">
-                        <div class="flex items-center space-x-4">
-                            <!-- Talent Image -->
-                            <img src="/<?= htmlspecialchars($talent['image']); ?>" 
-                                 alt="Talent Image" class="w-16 h-16 rounded-full object-cover">
-                            <div>
-                            <a href="user_profile.php?id=<?= $talent['user_id']; ?>" 
-                               class="ml-3 text-lg font-bold text-purple-700 hover:underline">
-                                <?= htmlspecialchars($talent['first_name'] . ' ' . $talent['last_name']); ?>
-                            </a>
-                                <p class="text-gray-700"> <?= htmlspecialchars($talent['can_do']); ?> </p>
-                            </div>
-                        </div>
-                        <p class="mt-2 text-sm"> <?= htmlspecialchars($talent['description']); ?> </p>
-                        <p class="text-sm text-gray-500">Budget: <strong>₱<?= number_format($talent['budget']); ?></strong></p>
-                        <p class="text-sm text-gray-500">Estimated Time: <?= htmlspecialchars($talent['estimated_time']); ?></p>
+           <div class="bg-white p-4 rounded shadow-md mb-4">
+    <?php if (count($talents) > 0): ?>
+        <?php foreach ($talents as $talent): ?>
+            <div class="border-b border-gray-300 py-4">
+                <div class="flex items-center space-x-4">
+                    <img src="/<?= htmlspecialchars($talent['image']); ?>" 
+                         alt="Talent Image" class="w-16 h-16 rounded-full object-cover">
+                    <div>
+                        <a href="user_profile.php?id=<?= $talent['user_id']; ?>" 
+                           class="ml-3 text-lg font-bold text-purple-700 hover:underline">
+                            <?= htmlspecialchars($talent['first_name'] . ' ' . $talent['last_name']); ?>
+                        </a>
+                        <p class="text-gray-700"><?= htmlspecialchars($talent['can_do']); ?></p>
                     </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <p class='text-gray-500'>No talents available.</p>
-            <?php endif; ?>
+                </div>
+                <p class="mt-2 text-sm"><?= htmlspecialchars($talent['description']); ?></p>
+                <p class="text-sm text-gray-500">Budget: <strong>₱<?= number_format($talent['budget']); ?></strong></p>
+                <p class="text-sm text-gray-500">Estimated Time: <?= htmlspecialchars($talent['estimated_time']); ?></p>
+                <?php
+// Check if the talent is already hired
+$checkQuery = "SELECT * FROM apply WHERE user_id = ? AND job_id = ?";
+$checkStmt = $conn->prepare($checkQuery);
+$checkStmt->execute([$talent['id'], $_SESSION['user_id']]);
+$isHired = $checkStmt->fetch();
+
+                
+                if ($isHired): ?>
+    <button class="bg-gray-400 text-white px-4 py-2 rounded mt-2 cursor-not-allowed" disabled>Hired</button>
+<?php else: ?>
+    <form method="POST" action="../../Models/hire_talent.php">
+    <input type="hidden" name="talent_id" value="<?= htmlspecialchars($talent['user_id']); ?>">
+    <input type="hidden" name="job_id" value="<?= htmlspecialchars($job['id']); ?>">
+    <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded mt-2">Hire</button>
+</form>
+
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <p class='text-gray-500'>No talents available.</p>
+    <?php endif; ?>
+</div>
+
             </div>
         </div>
 

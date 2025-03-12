@@ -70,11 +70,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hire_id'], $_POST['ac
 </head>
 <body class="bg-gray-100">
     <nav class="bg-purple-900 p-4 flex flex-wrap justify-between items-center text-white">
-        <div class="text-xl font-bold">GRADLINK</div>
+    <a href="dashboard.php">
+    <div class="text-xl font-bold cursor-pointer hover:text-blue-500">GRADLINK</div>
+</a>
         <div class="space-x-2 flex flex-wrap justify-center">
-            <select class="bg-white text-black p-2 rounded">
-                <option>Find Work</option>
-            </select>
+        <button  id="find-work"  class="bg-white text-black p-2 rounded">Find Work</button>
+            <script>
+            const find = document.getElementById('find-work');
+            find.addEventListener('click', function() {
+                window.location.href ='dashboard.php';
+            });
+             </script>
             <button  id="post-talent"  class="bg-white text-black p-2 rounded">Post Talent</button>
             <script>
             const button = document.getElementById('post-talent');
@@ -82,11 +88,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hire_id'], $_POST['ac
                 window.location.href ='Talent.php';
             });
              </script>
-            <input type="text" placeholder="Find Keyword for Work" class="p-2 rounded w-full md:w-auto">
+                    <input type="text" id="jobSearch" placeholder="Find Keyword for Work"
+    class="p-2 text-black rounded w-full md:w-auto" autocomplete="off">
+<div id="suggestions" class="bg-white shadow-md absolute rounded w-full hidden"></div>
+
+<script>
+document.getElementById('jobSearch').addEventListener('input', function () {
+    let searchQuery = this.value.trim();
+    let suggestionsBox = document.getElementById('suggestions');
+
+    if (searchQuery.length < 2) { 
+        suggestionsBox.innerHTML = "";
+        suggestionsBox.classList.add('hidden');
+        return;
+    }
+
+    fetch(`search_jobs.php?query=${searchQuery}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("Received Data:", data); // Debugging: Tignan ang response sa console
+            suggestionsBox.innerHTML = "";
+
+            if (data.length > 0 && !data.error) {
+                suggestionsBox.classList.remove('hidden');
+                data.forEach(job => {
+                    let suggestion = document.createElement('div');
+                    suggestion.textContent = job.job_title;
+                    suggestion.classList.add('p-5','ml-20', 'text-black', 'hover:bg-gray-200', 'cursor-pointer');
+
+                    suggestion.addEventListener('click', function () {
+                        document.getElementById('jobSearch').value = this.textContent;
+                        suggestionsBox.innerHTML = "";
+                        suggestionsBox.classList.add('hidden');
+                    });
+
+                    suggestionsBox.appendChild(suggestion);
+                });
+            } else {
+                console.log("No data found!");
+                suggestionsBox.classList.add('hidden');
+            }
+        })
+        .catch(error => console.error('Error fetching job titles:', error));
+});
+
+</script>
+<style>
+    #suggestions div {
+    color: black !important;
+}
+</style>
         </div>
         <div class="space-x-2 flex flex-wrap justify-center mt-2 md:mt-0">
         <a href="notification.php" class="bg-blue-500 text-white px-4 py-2 rounded">Notification</a>
-            <button>📧</button>
+        <a href="jobseeker_chat.php" class="bg-blue-500 text-white px-4 py-2 rounded">Chat</a>
             <a href="logout.php" class="bg-red-500 p-2 rounded">Logout</a>
         </div>
     </nav>
@@ -95,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hire_id'], $_POST['ac
         <div class="md:w-3/4 p-4">
             <div class="flex flex-wrap space-x-2 mb-4">
                 <button class="bg-purple-700 text-white p-2 rounded">For You</button>
-                <button class="bg-gray-300 p-2 rounded">Most Recent</button>
+                <!-- <button class="bg-gray-300 p-2 rounded">Most Recent</button> -->
                 <button id="save" class="bg-gray-300 p-2 rounded">Saved</button>
                 <script>
                     const save = document.getElementById('save');
