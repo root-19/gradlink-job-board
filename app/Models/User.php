@@ -74,10 +74,10 @@ class User {
         return $stmt->execute();
     }
 
-    // ✅ Reset Daily Credits (Run this when a user logs in)
+  
     public function resetDailyCredits($userId) {
         if (empty($userId)) {
-            return false; // Prevent error when user ID is null
+            return false;
         }
     
         $query = "SELECT credits, last_reset FROM proposal_credits WHERE user_id = :user_id";
@@ -104,23 +104,22 @@ class User {
             return $updateStmt->execute();
         }
     
-        return true; // Credits are already up to date
+        return true;
     }
-    // ✅ Use Credit (Deduct 5 Credit)
+   
     public function useCredit($userId) {
-        $this->resetDailyCredits($userId); // Ensure credits are refreshed daily
+        $this->resetDailyCredits($userId); 
 
         $query = "UPDATE proposal_credits SET credits = credits - 5  WHERE user_id = :user_id AND credits > 0";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(":user_id", $userId);
         $stmt->execute();
 
-        return $stmt->rowCount() > 0; // Return true if at least one row was affected
+        return $stmt->rowCount() > 0;
     }
 
-    // ✅ Get Current Credits
     public function getCredits($userId) {
-        $this->resetDailyCredits($userId); // Ensure credits are up to date
+        $this->resetDailyCredits($userId); 
 
         $query = "SELECT credits FROM proposal_credits WHERE user_id = :user_id";
         $stmt = $this->conn->prepare($query);
@@ -138,5 +137,85 @@ class User {
         
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+
+    public function resetEmployerCredits($userId) {
+        if (empty($userId)) {
+            return false;
+        }
+    
+        $query = "SELECT credits, last_reset FROM proposal_credits WHERE user_id = :user_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":user_id", $userId);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+        $today = date("Y-m-d");
+    
+        if (!$result) {
+            // If no record exists, create one with 10 credits
+            $insertQuery = "INSERT INTO proposal_credits (user_id, credits, last_reset) VALUES (:user_id, 10, :last_reset)";
+            $insertStmt = $this->conn->prepare($insertQuery);
+            $insertStmt->bindParam(":user_id", $userId);
+            $insertStmt->bindParam(":last_reset", $today);
+            return $insertStmt->execute();
+        } elseif ($result['last_reset'] !== $today) {
+            // If last reset is not today, update credits to 10
+            $updateQuery = "UPDATE proposal_credits SET credits = 10, last_reset = :last_reset WHERE user_id = :user_id";
+            $updateStmt = $this->conn->prepare($updateQuery);
+            $updateStmt->bindParam(":user_id", $userId);
+            $updateStmt->bindParam(":last_reset", $today);
+            return $updateStmt->execute();
+        }
+    
+        return true;
+    }
+    
+   
+public function useEmployerCredit($userId) {
+    // Fetch current credits and last reset timestamp
+    $query = "SELECT credits, last_reset FROM proposal_credits WHERE user_id = :user_id";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(":user_id", $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // If no entry exists, create one with 10 credits and set the last_reset timestamp
+    if (!$result) {
+        $insertQuery = "INSERT INTO proposal_credits (user_id, credits, last_reset) VALUES (:user_id, 10, NOW())";
+        $insertStmt = $this->conn->prepare($insertQuery);
+        $insertStmt->bindParam(":user_id", $userId, PDO::PARAM_INT);
+        $insertStmt->execute();
+        return true; // Entry created
+    }
+
+    $currentCredits = (int) $result['credits'];
+    $lastReset = $result['last_reset'];
+    $oneDayAgo = date("Y-m-d H:i:s", strtotime("-1 day"));
+
+    // 🔹 Prevent posting if the user has less than 5 credits
+    if ($currentCredits < 5) {
+        error_log("User {$userId} does not have enough credits to post.");
+        return false;
+    }
+
+    // 🔹 Only reset to 10 credits if exactly 0 credits AND 24 hours have passed since last reset
+    if ($currentCredits == 0 && strtotime($lastReset) <= strtotime($oneDayAgo)) {
+        $resetQuery = "UPDATE proposal_credits SET credits = 10, last_reset = NOW() WHERE user_id = :user_id";
+        $resetStmt = $this->conn->prepare($resetQuery);
+        $resetStmt->bindParam(":user_id", $userId, PDO::PARAM_INT);
+        $resetStmt->execute();
+        return true; // Reset applied
+    }
+
+    // 🔹 Deduct 5 credits per post
+    $updateQuery = "UPDATE proposal_credits SET credits = credits - 5 WHERE user_id = :user_id";
+    $updateStmt = $this->conn->prepare($updateQuery);
+    $updateStmt->bindParam(":user_id", $userId, PDO::PARAM_INT);
+    $updateStmt->execute();
+
+    return $updateStmt->rowCount() > 0;
+}
+
     
 }

@@ -37,14 +37,20 @@ $last_name = $_SESSION['last_name'] ?? 'User';
 
 // Fetch user proposal credits
 try {
+    $user_id = $_SESSION['user_id'] ?? 0; // Ensure $user_id is set
+
     $stmt = $conn->prepare("SELECT credits FROM proposal_credits WHERE user_id = :user_id");
-    $stmt->bindParam(":user_id", $userId, PDO::PARAM_INT);
+    $stmt->bindParam(":user_id", $user_id, PDO::PARAM_INT); // FIX: Use correct variable
     $stmt->execute();
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    $proposal_credits = $user['credits'] ?? 10; 
+
+    // Ensure correct value is displayed (0 instead of 10)
+    $proposal_credits = isset($user['credits']) ? $user['credits'] : 0; 
 } catch (PDOException $e) {
     die("Error fetching proposal credits: " . $e->getMessage());
 }
+
+
 
 // Fetch user details
 $user_id = $_SESSION['user_id'] ?? 0; // Ensure $user_id is set
@@ -229,6 +235,7 @@ function hireApplicant(userId, jobId) {
         <div class="mt-2 p-2 bg-gray-100 rounded">
     <p class="text-sm font-semibold">Proposal Credits:</p>
     <p class="text-lg font-bold text-green-600"><?= htmlspecialchars($proposal_credits); ?></p>
+ 
             </div>
       
             <!-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> -->
@@ -325,15 +332,15 @@ function hireApplicant(userId, jobId) {
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-document.getElementById("postJobBtn").addEventListener("click", function() {
+document.getElementById("postJobBtn").addEventListener("click", function () {
     document.getElementById("jobPostModal").classList.remove("hidden");
 });
 
-document.getElementById("closeModal").addEventListener("click", function() {
+document.getElementById("closeModal").addEventListener("click", function () {
     document.getElementById("jobPostModal").classList.add("hidden");
 });
 
-document.getElementById("submitJob").addEventListener("click", function() {
+document.getElementById("submitJob").addEventListener("click", function () {
     let jobTitle = document.getElementById("jobTitle").value.trim();
     let jobDescription = document.getElementById("jobDescription").value.trim();
     let jobBudget = document.getElementById("jobBudget").value.trim();
@@ -368,6 +375,13 @@ document.getElementById("submitJob").addEventListener("click", function() {
             }).then(() => {
                 window.location.reload();
             });
+        } else if (data.status === "error" && data.message === "Insufficient credits") {
+            Swal.fire({
+                icon: "error",
+                title: "Not Enough Credits",
+                text: "You need at least 5 credits to post a job.",
+                confirmButtonColor: "#d33"
+            });
         } else {
             Swal.fire({
                 icon: "error",
@@ -378,6 +392,7 @@ document.getElementById("submitJob").addEventListener("click", function() {
     })
     .catch(error => console.error("Error:", error));
 });
+
 </script>
 </body>
 </html>
